@@ -5,6 +5,7 @@ from config import API_BASE_URL, ORIGIN, DESTINATION, CURRENCY, SEARCH_DATES, BA
 def fetch_flight_prices():
     """
     Fetches flight prices from the LEVEL API for the configured dates.
+    Makes two separate calls: one for outbound flights and one for return flights.
 
     Returns:
         A list of flight deals, where each deal is a dictionary.
@@ -12,73 +13,133 @@ def fetch_flight_prices():
         Returns an empty list if there's an error.
     """
     all_deals = []
+    
     for outbound_year, outbound_month, return_year, return_month in SEARCH_DATES:
+        logging.info(f"Processing outbound: {outbound_year}-{outbound_month}, return: {return_year}-{return_month}")
         
-        outbound_date_str = f"{outbound_year}-{outbound_month:02d}-01"
-        
-        params = {
+        # First call: Get outbound flights (inbound tickets)
+        outbound_params = {
             'triptype': 'RT',
             'origin': ORIGIN,
             'destination': DESTINATION,
-            'outboundDate': outbound_date_str,
             'month': outbound_month,
             'year': outbound_year,
             'currencyCode': CURRENCY
         }
-
-        # Dynamically create the Referer URL
-        referer_url = (
-            f"https://www.flylevel.com/Flight/Select?culture=es-ES&triptype=RT&o1={ORIGIN}"
-            f"&d1={DESTINATION}&dd1={outbound_year}-{outbound_month:02d}&ADT=1&CHD=0&INL=0&r=true&mm=true"
-            f"&dd2={return_year}-{return_month:02d}&forcedCurrency={CURRENCY}&forcedCulture=es-ES"
-            "&newecom=true"
+        
+        outbound_referer = (
+            f"https://www.flylevel.com/Flight/Select?o1={ORIGIN}&d1={DESTINATION}"
+            f"&dd1={outbound_year}-{outbound_month:02d}&ADT=1&CHD=0&INL=0&r=true&mm=true"
+            f"&dd2={outbound_year}-{outbound_month:02d}&forcedCurrency={CURRENCY}&forcedCulture=es-ES&newecom=true"
         )
         
-        headers = BASE_HEADERS.copy()
-        headers['Referer'] = referer_url
-
+        outbound_headers = BASE_HEADERS.copy()
+        outbound_headers['Referer'] = outbound_referer
+        
         try:
-            logging.info(f"Fetching flights for outbound: {outbound_year}-{outbound_month}, return: {return_year}-{return_month}")
-            response = requests.get(API_BASE_URL, params=params, headers=headers)
-            response.raise_for_status()
+            logging.info(f"Fetching outbound flights for {outbound_year}-{outbound_month}")
+            outbound_response = requests.get(API_BASE_URL, params=outbound_params, headers=outbound_headers)
+            outbound_response.raise_for_status()
+            outbound_data = outbound_response.json()
+            logging.info(f"Outbound API Response received: {len(str(outbound_data))} characters")
             
-            data = response.json()
-            logging.debug(f"API Response: {data}")
-
-            # Here we need to parse the response.
-            # This is a hypothetical structure based on observing typical flight APIs.
-            # It assumes the API returns a structure with available dates and prices.
-            if data and data.get('days'):
-                for day_info in data['days']:
-                    if day_info.get('price'):
-                        # We need to construct the full outbound and return dates.
-                        # The API only gives us day of the month for the outbound trip.
-                        # The return date is not in the calendar response, this is a limitation.
-                        # We will assume a fixed return date for now for demonstration,
-                        # as the API structure for RT is not fully known.
-                        outbound_day = day_info.get('dayNumber')
-                        if not outbound_day: continue
-
-                        full_outbound_date = f"{outbound_year}-{outbound_month:02d}-{outbound_day:02d}"
+            # Parse outbound flights
+            outbound_flights = []
+            if outbound_data and isinstance(outbound_data, dict):
+                # Log the structure to understand the response
+                logging.info(f"Outbound data keys: {list(outbound_data.keys())}")
+                
+                # Try different possible structures
+                if 'days' in outbound_data:
+                    for day_info in outbound_data['days']:
+                        if isinstance(day_info, dict) and 'price' in day_info:
+                            price = day_info['price']
+                            if isinstance(price, dict) and 'amount' in price:
+                                outbound_flights.append({
+                                    'day': day_info.get('dayNumber', day_info.get('day')),
+                                    'price': price['amount']
+                                })
+                elif 'calendar' in outbound_data:
+                    # Alternative structure
+                    for day_info in outbound_data['calendar']:
+                        if isinstance(day_info, dict) and 'price' in day_info:
+                            price = day_info['price']
+                            if isinstance(price, (int, float)):
+                                outbound_flights.append({
+                                    'day': day_info.get('dayNumber', day_info.get('day')),
+                                    'price': price
+                                })
+            
+            logging.info(f"Found {len(outbound_flights)} outbound flights")
+            
+            # For each outbound flight, get return flights
+            for outbound_flight in outbound_flights[:5]:  # Limit to first 5 to avoid too many requests
+                outbound_date = f"{outbound_year}-{outbound_month:02d}-{outbound_flight['day']:02d}"
+                
+                # Second call: Get return flights for specific outbound date
+                return_params = {
+                    'triptype': 'RT',
+                    'origin': ORIGIN,
+                    'destination': DESTINATION,
+                    'outboundDate': outbound_date,
+                    'month': return_month,
+                    'year': return_year,
+                    'currencyCode': CURRENCY
+                }
+                
+                return_referer = (
+                    f"https://www.flylevel.com/Flight/Select?o1={ORIGIN}&d1={DESTINATION}"
+                    f"&dd1={outbound_date}&dd2={return_year}-{return_month:02d}-16&ADT=1&CHD=0&INL=0&r=true&mm=true"
+                    f"&forcedCurrency={CURRENCY}&forcedCulture=es-ES&newecom=true"
+                )
+                
+                return_headers = BASE_HEADERS.copy()
+                return_headers['Referer'] = return_referer
+                
+                try:
+                    logging.info(f"Fetching return flights for outbound date {outbound_date}")
+                    return_response = requests.get(API_BASE_URL, params=return_params, headers=return_headers)
+                    return_response.raise_for_status()
+                    return_data = return_response.json()
+                    
+                    # Parse return flights
+                    return_flights = []
+                    if return_data and isinstance(return_data, dict):
+                        if 'days' in return_data:
+                            for day_info in return_data['days']:
+                                if isinstance(day_info, dict) and 'price' in day_info:
+                                    price = day_info['price']
+                                    if isinstance(price, dict) and 'amount' in price:
+                                        return_flights.append({
+                                            'day': day_info.get('dayNumber', day_info.get('day')),
+                                            'price': price['amount']
+                                        })
+                    
+                    # Find cheapest return flight
+                    if return_flights:
+                        cheapest_return = min(return_flights, key=lambda x: x['price'])
+                        return_date = f"{return_year}-{return_month:02d}-{cheapest_return['day']:02d}"
                         
-                        # HYPOTHETICAL: The API for a calendar view on a round trip
-                        # might not return the full return date for each outbound day's price.
-                        # This is a significant unknown.
-                        # We will create a placeholder return date. A real implementation
-                        # would require deeper API analysis.
-                        placeholder_return_date = f"{return_year}-{return_month:02d}-15"
-
+                        # Calculate total price
+                        total_price = outbound_flight['price'] + cheapest_return['price']
+                        
                         deal = {
-                            "outbound_date": full_outbound_date,
-                            "return_date": placeholder_return_date, # This is a placeholder
-                            "price": day_info['price']['amount'],
+                            "outbound_date": outbound_date,
+                            "return_date": return_date,
+                            "price": total_price,
                             "currency": CURRENCY
                         }
                         all_deals.append(deal)
-
+                        logging.info(f"Found deal: {outbound_date} -> {return_date} = {total_price} {CURRENCY}")
+                    
+                except requests.exceptions.RequestException as e:
+                    logging.error(f"Error fetching return flights for {outbound_date}: {e}")
+                except ValueError as e:
+                    logging.error(f"Error parsing return flights JSON for {outbound_date}: {e}")
+                    
         except requests.exceptions.RequestException as e:
-            logging.error(f"Error fetching flight data: {e}")
-        except ValueError: # Catches JSON decoding errors
-            logging.error(f"Error parsing JSON from response. Response text: {response.text}")
+            logging.error(f"Error fetching outbound flight data: {e}")
+        except ValueError as e:
+            logging.error(f"Error parsing outbound flights JSON: {e}")
             
     return all_deals 

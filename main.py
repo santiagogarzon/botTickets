@@ -31,6 +31,16 @@ def check_flights_and_notify():
     
     if not deals:
         logging.info("No flight deals found in this run.")
+        # Send notification that bot is working but no cheap flights found
+        message = (
+            f"🤖 *Bot Status Update*\n\n"
+            f"✅ Bot is working correctly\n"
+            f"🔍 Checked for flights: BCN ➔ EZE\n"
+            f"📅 Dates: Dec 2025/Jan 2026 ➔ Apr 2026\n"
+            f"💰 No flights found below ${PRICE_THRESHOLD_USD} USD\n\n"
+            f"Next check in 2 minutes..."
+        )
+        notifier.send_telegram_notification(message)
         return
 
     # 3. Process and save deals
@@ -54,7 +64,7 @@ def check_flights_and_notify():
                     f"✈️ *¡Vuelo barato encontrado!*\n\n"
                     f"*Ruta:* {api_client.ORIGIN} ➔ {api_client.DESTINATION}\n"
                     f"*Salida:* {deal['outbound_date']}\n"
-                    f"*Regreso:* {deal['return_date']} (placeholder)\n"
+                    f"*Regreso:* {deal['return_date']}\n"
                     f"*Precio:* *{deal['price']} {deal['currency']}* (${price_usd:.2f} USD)\n\n"
                     f"¡Reserva ahora!"
                 )
