@@ -17,7 +17,7 @@ def send_telegram_notification(message):
 
     try:
         bot = telegram.Bot(token=bot_token)
-        bot.send_message(chat_id=chat_id, text=message, parse_mode=telegram.ParseMode.MARKDOWN)
+        bot.send_message(chat_id=chat_id, text=message)
         logging.info("Telegram notification sent successfully.")
     except Exception as e:
         logging.error(f"Failed to send Telegram notification: {e}") 
