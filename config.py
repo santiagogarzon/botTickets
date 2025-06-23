@@ -10,10 +10,12 @@ CURRENCY = "EUR"
 
 # Dates for the flight search
 # Each tuple represents (outbound_year, outbound_month, return_year, return_month)
-# We will search for outbound flights in Dec 2025 and Jan 2026, with return in Apr 2026
+# We will search for outbound flights in Dec 2025, Jan 2026, Feb 2026, and Mar 2026, with return in Apr 2026
 SEARCH_DATES = [
-    (2025, 12, 2026, 4),
-    (2026, 1, 2026, 4),
+    (2025, 12, 2026, 4),  # Diciembre 2025 -> Abril 2026
+    (2026, 1, 2026, 4),   # Enero 2026 -> Abril 2026
+    (2026, 2, 2026, 4),   # Febrero 2026 -> Abril 2026
+    (2026, 3, 2026, 4),   # Marzo 2026 -> Abril 2026
 ]
 
 # Headers for the API request
