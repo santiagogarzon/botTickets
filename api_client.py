@@ -43,38 +43,19 @@ def fetch_flight_prices():
             outbound_data = outbound_response.json()
             logging.info(f"Outbound API Response received: {len(str(outbound_data))} characters")
             
-            # Parse outbound flights
+            # Parse outbound flights (new format)
             outbound_flights = []
-            if outbound_data and isinstance(outbound_data, dict):
-                # Log the structure to understand the response
-                logging.info(f"Outbound data keys: {list(outbound_data.keys())}")
-                
-                # Try different possible structures
-                if 'days' in outbound_data:
-                    for day_info in outbound_data['days']:
-                        if isinstance(day_info, dict) and 'price' in day_info:
-                            price = day_info['price']
-                            if isinstance(price, dict) and 'amount' in price:
-                                outbound_flights.append({
-                                    'day': day_info.get('dayNumber', day_info.get('day')),
-                                    'price': price['amount']
-                                })
-                elif 'calendar' in outbound_data:
-                    # Alternative structure
-                    for day_info in outbound_data['calendar']:
-                        if isinstance(day_info, dict) and 'price' in day_info:
-                            price = day_info['price']
-                            if isinstance(price, (int, float)):
-                                outbound_flights.append({
-                                    'day': day_info.get('dayNumber', day_info.get('day')),
-                                    'price': price
-                                })
-            
+            if 'data' in outbound_data and 'dayPrices' in outbound_data['data']:
+                for day_info in outbound_data['data']['dayPrices']:
+                    outbound_flights.append({
+                        'date': day_info['date'],
+                        'price': day_info['price']
+                    })
             logging.info(f"Found {len(outbound_flights)} outbound flights")
             
             # For each outbound flight, get return flights
             for outbound_flight in outbound_flights[:5]:  # Limit to first 5 to avoid too many requests
-                outbound_date = f"{outbound_year}-{outbound_month:02d}-{outbound_flight['day']:02d}"
+                outbound_date = outbound_flight['date']
                 
                 # Second call: Get return flights for specific outbound date
                 return_params = {
@@ -102,23 +83,19 @@ def fetch_flight_prices():
                     return_response.raise_for_status()
                     return_data = return_response.json()
                     
-                    # Parse return flights
+                    # Parse return flights (new format)
                     return_flights = []
-                    if return_data and isinstance(return_data, dict):
-                        if 'days' in return_data:
-                            for day_info in return_data['days']:
-                                if isinstance(day_info, dict) and 'price' in day_info:
-                                    price = day_info['price']
-                                    if isinstance(price, dict) and 'amount' in price:
-                                        return_flights.append({
-                                            'day': day_info.get('dayNumber', day_info.get('day')),
-                                            'price': price['amount']
-                                        })
+                    if 'data' in return_data and 'dayPrices' in return_data['data']:
+                        for day_info in return_data['data']['dayPrices']:
+                            return_flights.append({
+                                'date': day_info['date'],
+                                'price': day_info['price']
+                            })
                     
                     # Find cheapest return flight
                     if return_flights:
                         cheapest_return = min(return_flights, key=lambda x: x['price'])
-                        return_date = f"{return_year}-{return_month:02d}-{cheapest_return['day']:02d}"
+                        return_date = cheapest_return['date']
                         
                         # Calculate total price
                         total_price = outbound_flight['price'] + cheapest_return['price']
