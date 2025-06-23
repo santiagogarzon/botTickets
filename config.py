@@ -25,7 +25,7 @@ BASE_HEADERS = {
 }
 
 # Price threshold for notifications
-PRICE_THRESHOLD_USD = 1500
+PRICE_THRESHOLD_EUR = 500
 
 # Database file name
 DB_FILE = "flight_prices.db" 

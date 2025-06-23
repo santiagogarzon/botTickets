@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 import api_client
 import database
 import notifier
-import currency_converter
-from config import PRICE_THRESHOLD_USD
+#from currency_converter import get_eur_to_usd_rate, convert_eur_to_usd
+from config import PRICE_THRESHOLD_EUR
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,12 +21,8 @@ def check_flights_and_notify():
     It fetches flights, saves them, and sends notifications for cheap deals.
     """
     logging.info("Starting flight check job...")
-    
-    # 1. Get currency conversion rate
-    eur_to_usd_rate = currency_converter.get_eur_to_usd_rate()
-    logging.info(f"Using EUR to USD conversion rate: {eur_to_usd_rate}")
 
-    # 2. Fetch flight prices
+    # 1. Fetch flight prices
     deals = api_client.fetch_flight_prices()
     
     if not deals:
@@ -37,13 +33,13 @@ def check_flights_and_notify():
             f"✅ Bot is working correctly\n"
             f"🔍 Checked for flights: BCN ➔ EZE\n"
             f"📅 Dates: Dec 2025/Jan 2026 ➔ Apr 2026\n"
-            f"💰 No flights found below ${PRICE_THRESHOLD_USD} USD\n\n"
+            f"💰 No flights found below {PRICE_THRESHOLD_EUR} EUR\n\n"
             f"Next check in 2 minutes..."
         )
         notifier.send_telegram_notification(message)
         return
 
-    # 3. Process and save deals
+    # 2. Process and save deals
     for deal in deals:
         # Save every found deal to the database
         database.save_flight_price(
@@ -53,19 +49,17 @@ def check_flights_and_notify():
             deal['currency']
         )
 
-        # 4. Check for deals below the threshold
+        # 3. Check for deals below the threshold in EUR
         if deal['currency'] == 'EUR':
-            price_usd = currency_converter.convert_eur_to_usd(deal['price'], eur_to_usd_rate)
-            
-            if price_usd < PRICE_THRESHOLD_USD:
-                logging.info(f"Found a cheap flight! Price: ${price_usd:.2f}")
+            if deal['price'] < PRICE_THRESHOLD_EUR:
+                logging.info(f"Found a cheap flight! Price: €{deal['price']:.2f}")
                 # Format the message for Telegram
                 message = (
                     f"✈️ *¡Vuelo barato encontrado!*\n\n"
                     f"*Ruta:* {api_client.ORIGIN} ➔ {api_client.DESTINATION}\n"
                     f"*Salida:* {deal['outbound_date']}\n"
                     f"*Regreso:* {deal['return_date']}\n"
-                    f"*Precio:* *{deal['price']} {deal['currency']}* (${price_usd:.2f} USD)\n\n"
+                    f"*Precio:* *{deal['price']} EUR*\n\n"
                     f"¡Reserva ahora!"
                 )
                 # Send notification
