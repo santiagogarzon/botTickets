@@ -41,6 +41,14 @@ def check_flights_and_notify():
 
     # 2. Process and save deals
     for deal in deals:
+        # Skip saving if this deal already exists
+        if database.flight_price_exists(
+            deal['outbound_date'],
+            deal['return_date'],
+            deal['price']
+        ):
+            continue
+
         # Save every found deal to the database
         database.save_flight_price(
             deal['outbound_date'],
@@ -54,13 +62,15 @@ def check_flights_and_notify():
             if deal['price'] < PRICE_THRESHOLD_EUR:
                 logging.info(f"Found a cheap flight! Price: €{deal['price']:.2f}")
                 # Format the message for Telegram
+                booking_url = f"https://www.flylevel.com/Flight/Select?culture=es-ES&triptype=RT&o1={api_client.ORIGIN}&d1={api_client.DESTINATION}&dd1={deal['outbound_date']}&ADT=1&CHD=0&INL=0&r=true&mm=true&dd2={deal['return_date']}&forcedCurrency=EUR&forcedCulture=es-ES&newecom=true&currency=EUR"
+
                 message = (
                     f"✈️ *¡Vuelo barato encontrado!*\n\n"
                     f"*Ruta:* {api_client.ORIGIN} ➔ {api_client.DESTINATION}\n"
                     f"*Salida:* {deal['outbound_date']}\n"
                     f"*Regreso:* {deal['return_date']}\n"
                     f"*Precio:* *{deal['price']} EUR*\n\n"
-                    f"¡Reserva ahora!"
+                    f"[¡Reserva ahora!]({booking_url})"
                 )
                 # Send notification
                 notifier.send_telegram_notification(message)

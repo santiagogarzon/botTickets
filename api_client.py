@@ -93,21 +93,34 @@ def fetch_flight_prices():
                             })
                     
                     # Find cheapest return flight
-                    if return_flights:
-                        cheapest_return = min(return_flights, key=lambda x: x['price'])
-                        return_date = cheapest_return['date']
-                        
-                        # Calculate total price
-                        total_price = outbound_flight['price'] + cheapest_return['price']
-                        
-                        deal = {
-                            "outbound_date": outbound_date,
-                            "return_date": return_date,
-                            "price": total_price,
-                            "currency": CURRENCY
-                        }
-                        all_deals.append(deal)
-                        logging.info(f"Found deal: {outbound_date} -> {return_date} = {total_price} {CURRENCY}")
+                    valid_returns = [r for r in return_flights if r.get("price") is not None]
+                    if not valid_returns:
+                        logging.warning(f"No valid return flights with price for outbound date {outbound_date}")
+                        continue
+
+                    cheapest_return = min(valid_returns, key=lambda x: x['price'])
+                    return_date = cheapest_return['date']
+                    
+                    # Calculate total price
+                    total_price = outbound_flight['price'] + cheapest_return['price']
+                    
+                    deal = {
+                        "outbound_date": outbound_date,
+                        "return_date": return_date,
+                        "price": total_price,
+                        "currency": CURRENCY
+                    }
+                    # Skip duplicate deals
+                    if any(
+                        d['outbound_date'] == deal['outbound_date'] and
+                        d['return_date'] == deal['return_date'] and
+                        d['price'] == deal['price']
+                        for d in all_deals
+                    ):
+                        continue
+                    
+                    all_deals.append(deal)
+                    logging.info(f"Found deal: {outbound_date} -> {return_date} = {total_price} {CURRENCY}")
                     
                 except requests.exceptions.RequestException as e:
                     logging.error(f"Error fetching return flights for {outbound_date}: {e}")
@@ -119,4 +132,4 @@ def fetch_flight_prices():
         except ValueError as e:
             logging.error(f"Error parsing outbound flights JSON: {e}")
             
-    return all_deals 
+    return all_deals
