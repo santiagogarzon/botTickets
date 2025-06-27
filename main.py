@@ -7,7 +7,7 @@ import api_client
 import database
 import notifier
 #from currency_converter import get_eur_to_usd_rate, convert_eur_to_usd
-from config import PRICE_THRESHOLD_EUR, ONE_WAY_THRESHOLD_EUR
+from config import PRICE_THRESHOLD_EUR, ONE_WAY_THRESHOLD_EUR, SPECIFIC_THRESHOLD_EUR
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,7 +22,7 @@ def check_flights_and_notify():
     """
     logging.info("Starting flight check job...")
 
-    # 1. Fetch all flight prices (round trip and one-way)
+    # 1. Fetch all flight prices (round trip, one-way, and specific date range)
     deals = api_client.fetch_all_flights()
     
     if not deals:
@@ -74,6 +74,44 @@ def check_flights_and_notify():
                     f"*Ruta:* {api_client.ORIGIN} ➔ {api_client.DESTINATION}\n"
                     f"*Salida:* {deal['outbound_date']}\n"
                     f"*Regreso:* {deal['return_date']}\n"
+                    f"*Precio:* *{deal['price']} EUR*\n\n"
+                    f"[¡Reserva ahora!]({booking_url})"
+                )
+                # Send notification
+                notifier.send_telegram_notification(message)
+                
+            elif deal['type'] == 'specific_range' and deal['price'] < SPECIFIC_THRESHOLD_EUR:
+                logging.info(f"Found a cheap specific range flight! Price: €{deal['price']:.2f}")
+                # Format the message for specific date range flights
+                booking_url = f"https://www.flylevel.com/Flight/Select?culture=es-ES&triptype=RT&o1={api_client.SPECIFIC_ORIGIN}&d1={api_client.SPECIFIC_DESTINATION}&dd1={deal['outbound_date']}&ADT=1&CHD=0&INL=0&r=true&mm=true&dd2={deal['return_date']}&forcedCurrency=EUR&forcedCulture=es-ES&newecom=true&currency=EUR"
+
+                message = (
+                    f"🎯 *¡Vuelo específico barato encontrado!*\n\n"
+                    f"*Ruta:* {api_client.SPECIFIC_ORIGIN} ➔ {api_client.SPECIFIC_DESTINATION}\n"
+                    f"*Salida:* {deal['outbound_date']}\n"
+                    f"*Regreso:* {deal['return_date']}\n"
+                    f"*Duración:* {deal['duration_days']} días\n"
+                    f"*Precio:* *{deal['price']} EUR*\n\n"
+                    f"[¡Reserva ahora!]({booking_url})"
+                )
+                # Send notification
+                notifier.send_telegram_notification(message)
+                
+            elif deal['type'] == 'aerolineas_argentinas' and deal['price'] < SPECIFIC_THRESHOLD_EUR:
+                logging.info(f"Found a cheap Aerolíneas Argentinas flight! Price: €{deal['price']:.2f}")
+                # Format the message for Aerolíneas Argentinas flights
+                # Create booking URL for Aerolíneas Argentinas
+                outbound_date_formatted = deal['outbound_date'].replace('-', '')
+                return_date_formatted = deal['return_date'].replace('-', '')
+                booking_url = f"https://www.aerolineas.com.ar/es-ar/vuelos/buscar?adt=1&inf=0&chd=0&flexDates=true&cabinClass=Economy&flightType=ROUND_TRIP&leg=MAD-COR-{outbound_date_formatted}&leg=COR-MAD-{return_date_formatted}"
+
+                message = (
+                    f"🇦🇷 *¡Vuelo Aerolíneas Argentinas barato encontrado!*\n\n"
+                    f"*Aerolínea:* {deal.get('airline', 'Aerolíneas Argentinas')}\n"
+                    f"*Ruta:* MAD ➔ COR (Madrid ➔ Córdoba)\n"
+                    f"*Salida:* {deal['outbound_date']}\n"
+                    f"*Regreso:* {deal['return_date']}\n"
+                    f"*Duración:* {deal['duration_days']} días\n"
                     f"*Precio:* *{deal['price']} EUR*\n\n"
                     f"[¡Reserva ahora!]({booking_url})"
                 )

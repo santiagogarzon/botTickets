@@ -13,6 +13,15 @@ ONE_WAY_ORIGIN = "BCN"
 ONE_WAY_DESTINATION = "BUE"  # Buenos Aires airport code
 ONE_WAY_THRESHOLD_EUR = 300
 
+# Search parameters for specific date range flights
+SPECIFIC_ORIGIN = "BCN"
+SPECIFIC_DESTINATION = "EZE"
+SPECIFIC_THRESHOLD_EUR = 1000
+SPECIFIC_START_DATE = "2026-03-10"
+SPECIFIC_END_DATE = "2026-04-15"
+MIN_DURATION_DAYS = 20
+MAX_DURATION_DAYS = 40
+
 # Dates for the round trip flight search
 # Each tuple represents (outbound_year, outbound_month, return_year, return_month)
 # We will search for outbound flights in Dec 2025, Jan 2026, Feb 2026, and Mar 2026, with return in Apr 2026 or May 2026
