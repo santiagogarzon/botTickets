@@ -677,7 +677,88 @@ def fetch_all_flights():
     round_trip_deals = fetch_flight_prices()
     one_way_deals = fetch_one_way_flights()
     specific_deals = fetch_specific_date_range_flights()
-    ar_deals = fetch_aerolineas_argentinas_flights()
-    aireuropa_deals = fetch_aireuropa_flights()
+    # ar_deals = fetch_aerolineas_argentinas_flights()
+    # aireuropa_deals = fetch_aireuropa_flights()
     
     return round_trip_deals + one_way_deals + specific_deals + ar_deals + aireuropa_deals
+
+def check_ar_token():
+    """
+    Check if the Aerolíneas Argentinas token is valid.
+    Returns True if token is valid, False otherwise.
+    """
+    try:
+        # Try to make a simple API call to test the token
+        test_params = {
+            'adt': 1,
+            'inf': 0,
+            'chd': 0,
+            'flexDates': 'true',
+            'cabinClass': 'Economy',
+            'flightType': 'ROUND_TRIP',
+            'leg': ['MAD-COR-20241201', 'COR-MAD-20241215']
+        }
+        
+        response = requests.get(AR_API_BASE_URL, params=test_params, headers=get_ar_headers(), timeout=10)
+        
+        # If we get a 401, token is invalid
+        if response.status_code == 401:
+            logging.warning("AR token is invalid (401 Unauthorized)")
+            return False
+        
+        # If we get a 200, token is valid
+        if response.status_code == 200:
+            logging.info("AR token is valid")
+            return True
+        
+        # For other status codes, assume token is valid (might be other API issues)
+        logging.info(f"AR token check returned status {response.status_code}, assuming valid")
+        return True
+        
+    except Exception as e:
+        logging.error(f"Error checking AR token: {e}")
+        return False
+
+def check_aireuropa_token():
+    """
+    Check if the AirEuropa tokens are valid.
+    Returns True if tokens are valid, False otherwise.
+    """
+    try:
+        # Try to make a simple API call to test the tokens
+        test_payload = {
+            "origin": "MAD",
+            "destination": "COR",
+            "departureDate": "2024-12-01",
+            "returnDate": "2024-12-15",
+            "adults": 1,
+            "children": 0,
+            "infants": 0,
+            "cabinClass": "economy",
+            "fareFamily": "DIGITAL1"
+        }
+        
+        response = requests.post(
+            AIR_EUROPA_API_BASE_URL,
+            json=test_payload,
+            headers=get_aireuropa_headers(),
+            timeout=10
+        )
+        
+        # If we get a 401, tokens are invalid
+        if response.status_code == 401:
+            logging.warning("AirEuropa tokens are invalid (401 Unauthorized)")
+            return False
+        
+        # If we get a 200, tokens are valid
+        if response.status_code == 200:
+            logging.info("AirEuropa tokens are valid")
+            return True
+        
+        # For other status codes, assume tokens are valid (might be other API issues)
+        logging.info(f"AirEuropa token check returned status {response.status_code}, assuming valid")
+        return True
+        
+    except Exception as e:
+        logging.error(f"Error checking AirEuropa tokens: {e}")
+        return False
