@@ -7,7 +7,7 @@ import api_client
 import database
 import notifier
 #from currency_converter import get_eur_to_usd_rate, convert_eur_to_usd
-from config import PRICE_THRESHOLD_EUR
+from config import PRICE_THRESHOLD_EUR, ONE_WAY_THRESHOLD_EUR
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,8 +22,8 @@ def check_flights_and_notify():
     """
     logging.info("Starting flight check job...")
 
-    # 1. Fetch flight prices
-    deals = api_client.fetch_flight_prices()
+    # 1. Fetch all flight prices (round trip and one-way)
+    deals = api_client.fetch_all_flights()
     
     if not deals:
         logging.info("No flight deals found in this run.")
@@ -34,7 +34,7 @@ def check_flights_and_notify():
         # Skip saving if this deal already exists
         if database.flight_price_exists(
             deal['outbound_date'],
-            deal['return_date'],
+            deal['return_date'] or 'ONE_WAY',
             deal['price']
         ):
             continue
@@ -42,20 +42,35 @@ def check_flights_and_notify():
         # Save every found deal to the database
         database.save_flight_price(
             deal['outbound_date'],
-            deal['return_date'],
+            deal['return_date'] or 'ONE_WAY',
             deal['price'],
             deal['currency']
         )
 
         # 3. Check for deals below the threshold in EUR
         if deal['currency'] == 'EUR':
-            if deal['price'] < PRICE_THRESHOLD_EUR:
-                logging.info(f"Found a cheap flight! Price: €{deal['price']:.2f}")
-                # Format the message for Telegram
+            if deal['type'] == 'one_way' and deal['price'] < ONE_WAY_THRESHOLD_EUR:
+                logging.info(f"Found a cheap one-way flight! Price: €{deal['price']:.2f}")
+                # Format the message for one-way flights
+                booking_url = f"https://www.flylevel.com/Flight/Select?culture=es-ES&triptype=OW&o1={api_client.ONE_WAY_ORIGIN}&d1={api_client.ONE_WAY_DESTINATION}&dd1={deal['outbound_date']}&ADT=1&CHD=0&INL=0&forcedCurrency=EUR&forcedCulture=es-ES&newecom=true&currency=EUR"
+
+                message = (
+                    f"✈️ *¡Vuelo de IDA barato encontrado!*\n\n"
+                    f"*Ruta:* {api_client.ONE_WAY_ORIGIN} ➔ {api_client.ONE_WAY_DESTINATION} (Buenos Aires)\n"
+                    f"*Fecha:* {deal['outbound_date']}\n"
+                    f"*Precio:* *{deal['price']} EUR*\n\n"
+                    f"[¡Reserva ahora!]({booking_url})"
+                )
+                # Send notification
+                notifier.send_telegram_notification(message)
+                
+            elif deal['type'] == 'round_trip' and deal['price'] < PRICE_THRESHOLD_EUR:
+                logging.info(f"Found a cheap round trip flight! Price: €{deal['price']:.2f}")
+                # Format the message for round trip flights
                 booking_url = f"https://www.flylevel.com/Flight/Select?culture=es-ES&triptype=RT&o1={api_client.ORIGIN}&d1={api_client.DESTINATION}&dd1={deal['outbound_date']}&ADT=1&CHD=0&INL=0&r=true&mm=true&dd2={deal['return_date']}&forcedCurrency=EUR&forcedCulture=es-ES&newecom=true&currency=EUR"
 
                 message = (
-                    f"✈️ *¡Vuelo barato encontrado!*\n\n"
+                    f"✈️ *¡Vuelo redondo barato encontrado!*\n\n"
                     f"*Ruta:* {api_client.ORIGIN} ➔ {api_client.DESTINATION}\n"
                     f"*Salida:* {deal['outbound_date']}\n"
                     f"*Regreso:* {deal['return_date']}\n"

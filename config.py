@@ -3,12 +3,17 @@
 # API Endpoint
 API_BASE_URL = "https://www.flylevel.com/nwe/flights/api/calendar/"
 
-# Search parameters
+# Search parameters for round trips
 ORIGIN = "BCN"
 DESTINATION = "EZE"
 CURRENCY = "EUR"
 
-# Dates for the flight search
+# Search parameters for one-way flights to Buenos Aires
+ONE_WAY_ORIGIN = "BCN"
+ONE_WAY_DESTINATION = "BUE"  # Buenos Aires airport code
+ONE_WAY_THRESHOLD_EUR = 300
+
+# Dates for the round trip flight search
 # Each tuple represents (outbound_year, outbound_month, return_year, return_month)
 # We will search for outbound flights in Dec 2025, Jan 2026, Feb 2026, and Mar 2026, with return in Apr 2026 or May 2026
 SEARCH_DATES = [
@@ -22,6 +27,13 @@ SEARCH_DATES = [
     (2026, 3, 2026, 5),   # Marzo 2026 -> Mayo 2026
 ]
 
+# Dates for one-way flights to Buenos Aires
+ONE_WAY_DATES = [
+    (2026, 1),  # Enero 2026
+    (2026, 2),  # Febrero 2026
+    (2026, 3),  # Marzo 2026
+]
+
 # Headers for the API request
 BASE_HEADERS = {
     'sec-ch-ua-platform': '"macOS"',
@@ -30,7 +42,7 @@ BASE_HEADERS = {
     'sec-ch-ua-mobile': '?0'
 }
 
-# Price threshold for notifications
+# Price threshold for round trip notifications
 PRICE_THRESHOLD_EUR = 700
 
 # Database file name

@@ -1,6 +1,66 @@
 import requests
 import logging
-from config import API_BASE_URL, ORIGIN, DESTINATION, CURRENCY, SEARCH_DATES, BASE_HEADERS
+from config import (
+    API_BASE_URL, ORIGIN, DESTINATION, CURRENCY, SEARCH_DATES, BASE_HEADERS,
+    ONE_WAY_ORIGIN, ONE_WAY_DESTINATION, ONE_WAY_DATES, ONE_WAY_THRESHOLD_EUR
+)
+
+def fetch_one_way_flights():
+    """
+    Fetches one-way flight prices from BCN to Buenos Aires for the configured dates.
+    
+    Returns:
+        A list of one-way flight deals.
+    """
+    one_way_deals = []
+    
+    for year, month in ONE_WAY_DATES:
+        logging.info(f"Fetching one-way flights BCN -> BUE for {year}-{month}")
+        
+        # API call for one-way flights
+        params = {
+            'triptype': 'OW',  # One-way
+            'origin': ONE_WAY_ORIGIN,
+            'destination': ONE_WAY_DESTINATION,
+            'month': month,
+            'year': year,
+            'currencyCode': CURRENCY
+        }
+        
+        referer = (
+            f"https://www.flylevel.com/Flight/Select?o1={ONE_WAY_ORIGIN}&d1={ONE_WAY_DESTINATION}"
+            f"&dd1={year}-{month:02d}&ADT=1&CHD=0&INL=0&forcedCurrency={CURRENCY}&forcedCulture=es-ES&newecom=true"
+        )
+        
+        headers = BASE_HEADERS.copy()
+        headers['Referer'] = referer
+        
+        try:
+            response = requests.get(API_BASE_URL, params=params, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Parse one-way flights
+            if 'data' in data and 'dayPrices' in data['data']:
+                for day_info in data['data']['dayPrices']:
+                    price = day_info['price']
+                    if price < ONE_WAY_THRESHOLD_EUR:
+                        deal = {
+                            "outbound_date": day_info['date'],
+                            "return_date": None,  # One-way flight
+                            "price": price,
+                            "currency": CURRENCY,
+                            "type": "one_way"
+                        }
+                        one_way_deals.append(deal)
+                        logging.info(f"Found cheap one-way flight: {day_info['date']} = {price} {CURRENCY}")
+            
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error fetching one-way flight data for {year}-{month}: {e}")
+        except ValueError as e:
+            logging.error(f"Error parsing one-way flights JSON for {year}-{month}: {e}")
+    
+    return one_way_deals
 
 def fetch_flight_prices():
     """
@@ -87,40 +147,35 @@ def fetch_flight_prices():
                     return_flights = []
                     if 'data' in return_data and 'dayPrices' in return_data['data']:
                         for day_info in return_data['data']['dayPrices']:
-                            return_flights.append({
-                                'date': day_info['date'],
-                                'price': day_info['price']
-                            })
+                            return_date = day_info['date']
+                            # Filter to only include return dates in April or May 2026
+                            if return_date.startswith('2026-04') or return_date.startswith('2026-05'):
+                                return_flights.append({
+                                    'date': return_date,
+                                    'price': day_info['price']
+                                })
+                            else:
+                                logging.warning(f"Skipping return date {return_date} - not in configured months (Apr/May 2026)")
                     
                     # Find cheapest return flight
-                    valid_returns = [r for r in return_flights if r.get("price") is not None]
-                    if not valid_returns:
-                        logging.warning(f"No valid return flights with price for outbound date {outbound_date}")
-                        continue
-
-                    cheapest_return = min(valid_returns, key=lambda x: x['price'])
-                    return_date = cheapest_return['date']
-                    
-                    # Calculate total price
-                    total_price = outbound_flight['price'] + cheapest_return['price']
-                    
-                    deal = {
-                        "outbound_date": outbound_date,
-                        "return_date": return_date,
-                        "price": total_price,
-                        "currency": CURRENCY
-                    }
-                    # Skip duplicate deals
-                    if any(
-                        d['outbound_date'] == deal['outbound_date'] and
-                        d['return_date'] == deal['return_date'] and
-                        d['price'] == deal['price']
-                        for d in all_deals
-                    ):
-                        continue
-                    
-                    all_deals.append(deal)
-                    logging.info(f"Found deal: {outbound_date} -> {return_date} = {total_price} {CURRENCY}")
+                    if return_flights:
+                        cheapest_return = min(return_flights, key=lambda x: x['price'])
+                        return_date = cheapest_return['date']
+                        
+                        # Calculate total price
+                        total_price = outbound_flight['price'] + cheapest_return['price']
+                        
+                        deal = {
+                            "outbound_date": outbound_date,
+                            "return_date": return_date,
+                            "price": total_price,
+                            "currency": CURRENCY,
+                            "type": "round_trip"
+                        }
+                        all_deals.append(deal)
+                        logging.info(f"Found deal: {outbound_date} -> {return_date} = {total_price} {CURRENCY}")
+                    else:
+                        logging.info(f"No valid return flights found for outbound date {outbound_date} in Apr/May 2026")
                     
                 except requests.exceptions.RequestException as e:
                     logging.error(f"Error fetching return flights for {outbound_date}: {e}")
@@ -133,3 +188,12 @@ def fetch_flight_prices():
             logging.error(f"Error parsing outbound flights JSON: {e}")
             
     return all_deals
+
+def fetch_all_flights():
+    """
+    Fetches both round trip and one-way flights.
+    """
+    round_trip_deals = fetch_flight_prices()
+    one_way_deals = fetch_one_way_flights()
+    
+    return round_trip_deals + one_way_deals
