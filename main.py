@@ -15,12 +15,37 @@ load_dotenv()
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def refresh_tokens_if_needed():
+    """
+    Check and refresh tokens if they are expired.
+    This function will be called before each flight check.
+    """
+    try:
+        from smart_token_refresh import SmartTokenRefresh
+        
+        logging.info("🔍 Checking token status before flight search...")
+        smart_refresh = SmartTokenRefresh()
+        success = smart_refresh.smart_refresh()
+        
+        if success:
+            logging.info("✅ Token refresh completed successfully")
+        else:
+            logging.warning("⚠️ Token refresh failed, continuing with current tokens")
+            
+    except ImportError:
+        logging.warning("⚠️ Smart token refresh not available, continuing with current tokens")
+    except Exception as e:
+        logging.error(f"❌ Error during token refresh: {e}")
+
 def check_flights_and_notify():
     """
     Main job function to be scheduled.
     It fetches flights, saves them, and sends notifications for cheap deals.
     """
     logging.info("Starting flight check job...")
+
+    # Refresh tokens if needed before starting flight search
+    refresh_tokens_if_needed()
 
     # 1. Fetch all flight prices (round trip, one-way, and specific date range)
     deals = api_client.fetch_all_flights()
@@ -147,6 +172,7 @@ def check_flights_and_notify():
 def main():
     """Main function to initialize and run the scheduler."""
     logging.info("Application starting...")
+    
     # Initialize the database
     database.init_db()
 

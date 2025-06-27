@@ -1,4 +1,6 @@
 requests
 schedule
 python-telegram-bot
-python-dotenv 
+python-dotenv
+selenium
+webdriver-manager 
