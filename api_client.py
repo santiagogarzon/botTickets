@@ -7,7 +7,8 @@ from config import (
     API_BASE_URL, ORIGIN, DESTINATION, CURRENCY, SEARCH_DATES, BASE_HEADERS,
     ONE_WAY_ORIGIN, ONE_WAY_DESTINATION, ONE_WAY_DATES, ONE_WAY_THRESHOLD_EUR,
     SPECIFIC_ORIGIN, SPECIFIC_DESTINATION, SPECIFIC_THRESHOLD_EUR,
-    SPECIFIC_START_DATE, SPECIFIC_END_DATE, MIN_DURATION_DAYS, MAX_DURATION_DAYS
+    SPECIFIC_START_DATE, SPECIFIC_END_DATE, MIN_DURATION_DAYS, MAX_DURATION_DAYS,
+    AR_ROUTES
 )
 
 # Aerolíneas Argentinas API configuration
@@ -94,7 +95,7 @@ def get_ar_headers():
 
 def fetch_aerolineas_argentinas_flights():
     """
-    Fetches flights from Aerolíneas Argentinas API for the specific date range logic.
+    Fetches flights from Aerolíneas Argentinas API for multiple routes.
     Searches for flights between March 10 and April 15 with 20-30 days duration.
     
     Returns:
@@ -108,84 +109,97 @@ def fetch_aerolineas_argentinas_flights():
     
     logging.info(f"Fetching Aerolíneas Argentinas flights: {SPECIFIC_START_DATE} to {SPECIFIC_END_DATE}")
     
-    # Generate all possible outbound dates in the range
-    current_date = start_date
-    while current_date <= end_date:
-        outbound_date_str = current_date.strftime("%Y%m%d")
+    # Process each route
+    for route in AR_ROUTES:
+        origin = route["origin"]
+        destination = route["destination"]
+        description = route["description"]
+        threshold = route["threshold_eur"]
         
-        # Calculate valid return date range (20-30 days after outbound)
-        min_return_date = current_date + timedelta(days=MIN_DURATION_DAYS)
-        max_return_date = current_date + timedelta(days=MAX_DURATION_DAYS)
+        logging.info(f"Processing AR route: {description}")
         
-        # Ensure return date doesn't exceed our end date
-        max_return_date = min(max_return_date, end_date)
-        
-        if min_return_date <= max_return_date:
-            return_date_str = max_return_date.strftime("%Y%m%d")
+        # Generate all possible outbound dates in the range
+        current_date = start_date
+        while current_date <= end_date:
+            outbound_date_str = current_date.strftime("%Y%m%d")
             
-            # AR API parameters
-            params = {
-                'adt': 1,
-                'inf': 0,
-                'chd': 0,
-                'flexDates': 'true',
-                'cabinClass': 'Economy',
-                'flightType': 'ROUND_TRIP',
-                'leg': [f'MAD-COR-{outbound_date_str}', f'COR-MAD-{return_date_str}']
-            }
+            # Calculate valid return date range (20-30 days after outbound)
+            min_return_date = current_date + timedelta(days=MIN_DURATION_DAYS)
+            max_return_date = current_date + timedelta(days=MAX_DURATION_DAYS)
             
-            try:
-                logging.info(f"Fetching AR flights for {current_date.strftime('%Y-%m-%d')} -> {max_return_date.strftime('%Y-%m-%d')}")
-                response = requests.get(AR_API_BASE_URL, params=params, headers=get_ar_headers())
-                response.raise_for_status()
-                data = response.json()
+            # Ensure return date doesn't exceed our end date
+            max_return_date = min(max_return_date, end_date)
+            
+            if min_return_date <= max_return_date:
+                return_date_str = max_return_date.strftime("%Y%m%d")
                 
-                # Parse AR API response
-                if 'calendarOffers' in data:
-                    # Check outbound flights (index 0)
-                    if '0' in data['calendarOffers']:
-                        outbound_offers = data['calendarOffers']['0']
-                        for offer in outbound_offers:
-                            if offer.get('leg') and offer.get('offerDetails'):
-                                offer_date = datetime.strptime(offer['departure'], "%Y-%m-%d")
-                                if offer_date == current_date:
-                                    outbound_price = offer['offerDetails']['fare']['total']
-                                    
-                                    # Check return flights (index 1)
-                                    if '1' in data['calendarOffers']:
-                                        return_offers = data['calendarOffers']['1']
-                                        for return_offer in return_offers:
-                                            if return_offer.get('leg') and return_offer.get('offerDetails'):
-                                                return_date = datetime.strptime(return_offer['departure'], "%Y-%m-%d")
-                                                duration_days = (return_date - current_date).days
-                                                
-                                                # Check if return date is within valid range
-                                                if min_return_date <= return_date <= max_return_date:
-                                                    if MIN_DURATION_DAYS <= duration_days <= MAX_DURATION_DAYS:
-                                                        return_price = return_offer['offerDetails']['fare']['total']
-                                                        total_price = outbound_price + return_price
-                                                        
-                                                        if total_price < SPECIFIC_THRESHOLD_EUR:
-                                                            deal = {
-                                                                "outbound_date": offer['departure'],
-                                                                "return_date": return_offer['departure'],
-                                                                "price": total_price,
-                                                                "currency": "EUR",  # AR API returns EUR
-                                                                "type": "aerolineas_argentinas",
-                                                                "duration_days": duration_days,
-                                                                "airline": "Aerolíneas Argentinas"
-                                                            }
-                                                            ar_deals.append(deal)
-                                                            logging.info(f"Found AR deal: {offer['departure']} -> {return_offer['departure']} ({duration_days} days) = {total_price} EUR")
-                                                            break
+                # AR API parameters
+                params = {
+                    'adt': 1,
+                    'inf': 0,
+                    'chd': 0,
+                    'flexDates': 'true',
+                    'cabinClass': 'Economy',
+                    'flightType': 'ROUND_TRIP',
+                    'leg': [f'{origin}-{destination}-{outbound_date_str}', f'{destination}-{origin}-{return_date_str}']
+                }
                 
-            except requests.exceptions.RequestException as e:
-                logging.error(f"Error fetching AR flights for {current_date.strftime('%Y-%m-%d')}: {e}")
-            except ValueError as e:
-                logging.error(f"Error parsing AR flights JSON for {current_date.strftime('%Y-%m-%d')}: {e}")
-        
-        # Move to next day
-        current_date += timedelta(days=1)
+                try:
+                    logging.info(f"Fetching AR flights for {description}: {current_date.strftime('%Y-%m-%d')} -> {max_return_date.strftime('%Y-%m-%d')}")
+                    response = requests.get(AR_API_BASE_URL, params=params, headers=get_ar_headers())
+                    response.raise_for_status()
+                    data = response.json()
+                    
+                    # Parse AR API response
+                    if 'calendarOffers' in data:
+                        # Check outbound flights (index 0)
+                        if '0' in data['calendarOffers']:
+                            outbound_offers = data['calendarOffers']['0']
+                            for offer in outbound_offers:
+                                if offer.get('leg') and offer.get('offerDetails'):
+                                    offer_date = datetime.strptime(offer['departure'], "%Y-%m-%d")
+                                    if offer_date == current_date:
+                                        outbound_price = offer['offerDetails']['fare']['total']
+                                        
+                                        # Check return flights (index 1)
+                                        if '1' in data['calendarOffers']:
+                                            return_offers = data['calendarOffers']['1']
+                                            for return_offer in return_offers:
+                                                if return_offer.get('leg') and return_offer.get('offerDetails'):
+                                                    return_date = datetime.strptime(return_offer['departure'], "%Y-%m-%d")
+                                                    duration_days = (return_date - current_date).days
+                                                    
+                                                    # Check if return date is within valid range
+                                                    if min_return_date <= return_date <= max_return_date:
+                                                        if MIN_DURATION_DAYS <= duration_days <= MAX_DURATION_DAYS:
+                                                            return_price = return_offer['offerDetails']['fare']['total']
+                                                            total_price = outbound_price + return_price
+                                                            
+                                                            if total_price < threshold:
+                                                                deal = {
+                                                                    "outbound_date": offer['departure'],
+                                                                    "return_date": return_offer['departure'],
+                                                                    "price": total_price,
+                                                                    "currency": "EUR",  # AR API returns EUR
+                                                                    "type": "aerolineas_argentinas",
+                                                                    "duration_days": duration_days,
+                                                                    "airline": "Aerolíneas Argentinas",
+                                                                    "route": description,
+                                                                    "origin": origin,
+                                                                    "destination": destination,
+                                                                    "threshold": threshold
+                                                                }
+                                                                ar_deals.append(deal)
+                                                                logging.info(f"Found AR deal: {description} - {offer['departure']} -> {return_offer['departure']} ({duration_days} days) = {total_price} EUR")
+                                                                break
+                
+                except requests.exceptions.RequestException as e:
+                    logging.error(f"Error fetching AR flights for {description} on {current_date.strftime('%Y-%m-%d')}: {e}")
+                except ValueError as e:
+                    logging.error(f"Error parsing AR flights JSON for {description} on {current_date.strftime('%Y-%m-%d')}: {e}")
+            
+            # Move to next day
+            current_date += timedelta(days=1)
     
     return ar_deals
 
@@ -347,7 +361,7 @@ def fetch_one_way_flights():
         
         referer = (
             f"https://www.flylevel.com/Flight/Select?o1={ONE_WAY_ORIGIN}&d1={ONE_WAY_DESTINATION}"
-            f"&dd1={year}-{month:02d}&ADT=1&CHD=0&INL=0&forcedCurrency={CURRENCY}&forcedCulture=es-ES&newecom=true"
+            f"&dd1={year}-{month}&ADT=1&CHD=0&INL=0&forcedCurrency={CURRENCY}&forcedCulture=es-ES&newecom=true"
         )
         
         headers = BASE_HEADERS.copy()

@@ -97,18 +97,20 @@ def check_flights_and_notify():
                 # Send notification
                 notifier.send_telegram_notification(message)
                 
-            elif deal['type'] == 'aerolineas_argentinas' and deal['price'] < SPECIFIC_THRESHOLD_EUR:
+            elif deal['type'] == 'aerolineas_argentinas' and deal['price'] < deal.get('threshold', SPECIFIC_THRESHOLD_EUR):
                 logging.info(f"Found a cheap Aerolíneas Argentinas flight! Price: €{deal['price']:.2f}")
                 # Format the message for Aerolíneas Argentinas flights
                 # Create booking URL for Aerolíneas Argentinas
                 outbound_date_formatted = deal['outbound_date'].replace('-', '')
                 return_date_formatted = deal['return_date'].replace('-', '')
-                booking_url = f"https://www.aerolineas.com.ar/es-ar/vuelos/buscar?adt=1&inf=0&chd=0&flexDates=true&cabinClass=Economy&flightType=ROUND_TRIP&leg=MAD-COR-{outbound_date_formatted}&leg=COR-MAD-{return_date_formatted}"
+                origin = deal.get('origin', 'MAD')
+                destination = deal.get('destination', 'COR')
+                booking_url = f"https://www.aerolineas.com.ar/es-ar/vuelos/buscar?adt=1&inf=0&chd=0&flexDates=true&cabinClass=Economy&flightType=ROUND_TRIP&leg={origin}-{destination}-{outbound_date_formatted}&leg={destination}-{origin}-{return_date_formatted}"
 
                 message = (
                     f"🇦🇷 *¡Vuelo Aerolíneas Argentinas barato encontrado!*\n\n"
                     f"*Aerolínea:* {deal.get('airline', 'Aerolíneas Argentinas')}\n"
-                    f"*Ruta:* MAD ➔ COR (Madrid ➔ Córdoba)\n"
+                    f"*Ruta:* {deal.get('route', f'{origin} ➔ {destination}')}\n"
                     f"*Salida:* {deal['outbound_date']}\n"
                     f"*Regreso:* {deal['return_date']}\n"
                     f"*Duración:* {deal['duration_days']} días\n"

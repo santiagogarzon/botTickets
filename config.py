@@ -22,6 +22,22 @@ SPECIFIC_END_DATE = "2026-04-15"
 MIN_DURATION_DAYS = 20
 MAX_DURATION_DAYS = 40
 
+# Aerolíneas Argentinas configuration
+AR_ROUTES = [
+    {
+        "origin": "MAD",
+        "destination": "COR", 
+        "description": "Madrid ➔ Córdoba",
+        "threshold_eur": 800
+    },
+    {
+        "origin": "BCN", 
+        "destination": "COR",
+        "description": "Barcelona ➔ Córdoba", 
+        "threshold_eur": 800
+    }
+]
+
 # Dates for the round trip flight search
 # Each tuple represents (outbound_year, outbound_month, return_year, return_month)
 # We will search for outbound flights in Dec 2025, Jan 2026, Feb 2026, and Mar 2026, with return in Apr 2026 or May 2026
