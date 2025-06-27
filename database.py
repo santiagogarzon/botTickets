@@ -42,22 +42,20 @@ def save_flight_price(outbound_date, return_date, price, currency):
     except sqlite3.Error as e:
         logging.error(f"Failed to save flight price: {e}")
 
-
-# Function to check if a flight with given parameters already exists
 def flight_price_exists(outbound_date, return_date, price):
-    """Checks if a flight with the given parameters already exists in the database."""
+    """Checks if a flight price already exists in the database."""
     try:
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT 1 FROM flights
+            SELECT COUNT(*) FROM flights 
             WHERE outbound_date = ? AND return_date = ? AND price = ?
         ''', (outbound_date, return_date, price))
-        exists = cursor.fetchone() is not None
+        count = cursor.fetchone()[0]
         conn.close()
-        return exists
+        return count > 0
     except sqlite3.Error as e:
-        logging.error(f"Database error while checking flight existence: {e}")
+        logging.error(f"Failed to check flight price existence: {e}")
         return False
 
 from datetime import datetime

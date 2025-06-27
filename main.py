@@ -27,16 +27,6 @@ def check_flights_and_notify():
     
     if not deals:
         logging.info("No flight deals found in this run.")
-        # Send notification that bot is working but no cheap flights found
-        message = (
-            f"🤖 *Bot Status Update*\n\n"
-            f"✅ Bot is working correctly\n"
-            f"🔍 Checked for flights: BCN ➔ EZE\n"
-            f"📅 Dates: Dec 2025/Jan 2026/Feb 2026/Mar 2026 ➔ Apr 2026\n"
-            f"💰 No flights found below {PRICE_THRESHOLD_EUR} EUR\n\n"
-            f"Next check in 5 minutes..."
-        )
-        notifier.send_telegram_notification(message)
         return
 
     # 2. Process and save deals
@@ -87,10 +77,10 @@ def main():
     # Run the job immediately at startup
     check_flights_and_notify()
     
-    # Schedule the job to run every 5 minutes
-    schedule.every(5).minutes.do(check_flights_and_notify)
+    # Schedule the job to run every 15 minutes
+    schedule.every(15).minutes.do(check_flights_and_notify)
     
-    logging.info("Scheduler started. Will run every 5 minutes.")
+    logging.info("Scheduler started. Will run every 15 minutes.")
 
     while True:
         schedule.run_pending()
