@@ -120,6 +120,27 @@ def check_flights_and_notify():
                 # Send notification
                 notifier.send_telegram_notification(message)
 
+            elif deal['type'] == 'aireuropa' and deal['price'] < deal.get('threshold', SPECIFIC_THRESHOLD_EUR):
+                logging.info(f"Found a cheap AirEuropa flight! Price: €{deal['price']:.2f}")
+                # Format the message for AirEuropa flights
+                # Create booking URL for AirEuropa
+                origin = deal.get('origin', 'MAD')
+                destination = deal.get('destination', 'COR')
+                booking_url = f"https://digital.aireuropa.com/es/vuelos/buscar?origin={origin}&destination={destination}&departureDate={deal['outbound_date']}&returnDate={deal['return_date']}&adults=1&children=0&infants=0&cabinClass=economy&fareFamily=DIGITAL1"
+
+                message = (
+                    f"✈️ *¡Vuelo AirEuropa barato encontrado!*\n\n"
+                    f"*Aerolínea:* {deal.get('airline', 'AirEuropa')}\n"
+                    f"*Ruta:* {deal.get('route', f'{origin} ➔ {destination}')}\n"
+                    f"*Salida:* {deal['outbound_date']}\n"
+                    f"*Regreso:* {deal['return_date']}\n"
+                    f"*Duración:* {deal['duration_days']} días\n"
+                    f"*Precio:* *{deal['price']} EUR*\n\n"
+                    f"[¡Reserva ahora!]({booking_url})"
+                )
+                # Send notification
+                notifier.send_telegram_notification(message)
+
     logging.info("Flight check job finished.")
 
 

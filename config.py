@@ -16,7 +16,7 @@ ONE_WAY_THRESHOLD_EUR = 300
 # Search parameters for specific date range flights
 SPECIFIC_ORIGIN = "BCN"
 SPECIFIC_DESTINATION = "EZE"
-SPECIFIC_THRESHOLD_EUR = 1000
+SPECIFIC_THRESHOLD_EUR = 800
 SPECIFIC_START_DATE = "2026-03-10"
 SPECIFIC_END_DATE = "2026-04-15"
 MIN_DURATION_DAYS = 20
@@ -28,13 +28,17 @@ AR_ROUTES = [
         "origin": "MAD",
         "destination": "COR", 
         "description": "Madrid ➔ Córdoba",
-        "threshold_eur": 800
-    },
+        "threshold_eur": 1000
+    }
+]
+
+# AirEuropa configuration
+AIR_EUROPA_ROUTES = [
     {
-        "origin": "BCN", 
+        "origin": "MAD",
         "destination": "COR",
-        "description": "Barcelona ➔ Córdoba", 
-        "threshold_eur": 800
+        "description": "Madrid ➔ Córdoba (AirEuropa)",
+        "threshold_eur": 1000
     }
 ]
 

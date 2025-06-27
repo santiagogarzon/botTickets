@@ -8,12 +8,17 @@ from config import (
     ONE_WAY_ORIGIN, ONE_WAY_DESTINATION, ONE_WAY_DATES, ONE_WAY_THRESHOLD_EUR,
     SPECIFIC_ORIGIN, SPECIFIC_DESTINATION, SPECIFIC_THRESHOLD_EUR,
     SPECIFIC_START_DATE, SPECIFIC_END_DATE, MIN_DURATION_DAYS, MAX_DURATION_DAYS,
-    AR_ROUTES
+    AR_ROUTES, AIR_EUROPA_ROUTES
 )
 
 # Aerolíneas Argentinas API configuration
 AR_API_BASE_URL = "https://api.aerolineas.com.ar/v1/flights/offers"
 AR_AUTH_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Ik1EaEdRa0U0T0RNeE56WTRRemcxTVRjMVJERXhOekF5T0RCRU1EUTVSakl6TURjNU5qVTVNQSJ9.eyJpc3MiOiJodHRwczovL2Flcm9saW5lYXMtdGVzdC5hdXRoMC5jb20vIiwic3ViIjoib3k4MVpVbjZJWDFndjRlR2NlU0ZJeWFGZmhINmE2NkdAY2xpZW50cyIsImF1ZCI6ImFyLWF1dGgiLCJpYXQiOjE3NTA5MzIyODUsImV4cCI6MTc1MTAxODY4NSwic2NvcGUiOiJjYXRhbG9nOnJlYWQgY2F0YWxvZzphZG1pbiBydWxlczpwYXltZW50OnJlYWQgcnVsZXM6c2hvcHBpbmc6cmVhZCBydWxlczpjaGVja291dDpyZWFkIGxveWFsdHk6cmVhZCIsImxveWFsdHk6YWRtaW4iLCJjYXRhbG9nOnBheW1lbnQ6cmVhZCIsInN1YmxvczpyZWFkIiwiZm9ybXM6cmVhZCIsImZvcm1zOmFkbWluIl19.YKkRO-PoUJi-XOjzNVFlgu5PfG9Q4EyYG-dTiy1yQW134NFZtkAmAf65BtkyfGxmOKF1khSGM3S531ugQoY0EexKKmhpB95-yLSlVxcgjhGuK8-Am7CvnBcuJbVyt-hru-UHX1SoBtCMwZHhnK7oIWBKGIU01SIMTX467YcdxmqSiqbeFoEnyUbhPEzIj_xysAz_L7OBqTzF8Q0iY2XsK7t5UwFfn2v0SJlBTSfaxVFPCtfMlBtscT0uXrsFB_nODjhwE-qR8PpH8BmbJbE8LPnz0QECS2FkxidsMieRClBM0pczFZI0kZ45WSfyaqrpet2HtOnfl3KLyRpSjRDWUA"
+
+# AirEuropa API configuration
+AIR_EUROPA_API_BASE_URL = "https://api-des.aireuropa.com/v2/search/air-calendars"
+AIR_EUROPA_AUTH_TOKEN = "IWDcV5ftwwsFxGrBTMYOkTCK8BCp"
+AIR_EUROPA_D_TOKEN = "3:VqFR+oCS53LNkczuXgRMmg==:VXFuOZeaxJ8APmqIw3vCLb1SNciDEb/gRZTFJdQ3Rn7laJ5Go3HmIImNe/aAidcu9NITFePW0gpfkBBbbGPS5wuGvu2J4NgZyPw/Z81kzbZ5u/nHcMRlxDNoV0dSo1oj5kw/I/XafLWw5CH+7Z8c3KbLDLzcQdaB2ZYVrCoUgxFiVBwcmOjyznmfEzrfG2K/cOHNuouyoDHmq6aZ4FWIeHQ+r5DghwgUixrm3t/mnqvGB3v4JIqr9tTlh0ZCA3jlT6oca3kajpYjq/v0BHLm5r9dv9hk885cTpA33fXaBTOJjKeqtt1t6RL8L0+hr1e7pY6KKZjVkMQopui0JAnozfvzwrHcsOTLuPQ5cG89PcidEDJ5TT7z9VVwPC0lHE/qMfKZvzdhUXMy9pDWBRFS8Whic1HQrnxv0O/cHL/EPuItqyfaC8mKFBjj+Qu2HHG1UlNWk1DHmlY2G/u+YiJRdwAiDYDjqdc8V1pm1zn6/Svea1hWJUZMketZZPAgR3bDDc0M7VubHpO0uH/tQQpHsg==:+Ts17FbJPkQmanzG9bC+1W4rQd0AkIcJN7IpRMqCqmk="
 
 def decode_jwt_token(token):
     """
@@ -91,6 +96,31 @@ def get_ar_headers():
         'sec-fetch-site': 'same-site',
         'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
         'x-channel-id': 'WEB_ES'
+    }
+
+def get_aireuropa_headers():
+    """
+    Returns the headers for AirEuropa API.
+    """
+    return {
+        'accept': 'application/json',
+        'accept-language': 'es-419,es;q=0.9,en-US;q=0.8,en;q=0.7',
+        'ama-client-facts': 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJmYWN0IiwiQ291bnRyeVBvcnRhbCI6IkVTIiwidXNlTWlsZXMiOiJmYWxzZSJ9.',
+        'ama-client-ref': 'cadb0f97-34c3-42ad-a856-84b64ff36593:1',
+        'authorization': f'Bearer {AIR_EUROPA_AUTH_TOKEN}',
+        'cache-control': 'max-age=0',
+        'content-type': 'application/json',
+        'origin': 'https://digital.aireuropa.com',
+        'priority': 'u=1, i',
+        'referer': 'https://digital.aireuropa.com/',
+        'sec-ch-ua': '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-site',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+        'x-d-token': AIR_EUROPA_D_TOKEN
     }
 
 def fetch_aerolineas_argentinas_flights():
@@ -521,6 +551,125 @@ def fetch_flight_prices():
             
     return all_deals
 
+def fetch_aireuropa_flights():
+    """
+    Fetches flights from AirEuropa API for multiple routes.
+    Searches for flights between March 10 and April 15 with 20-30 days duration.
+    
+    Returns:
+        A list of AirEuropa flight deals.
+    """
+    aireuropa_deals = []
+    
+    # Parse start and end dates
+    start_date = datetime.strptime(SPECIFIC_START_DATE, "%Y-%m-%d")
+    end_date = datetime.strptime(SPECIFIC_END_DATE, "%Y-%m-%d")
+    
+    logging.info(f"Fetching AirEuropa flights: {SPECIFIC_START_DATE} to {SPECIFIC_END_DATE}")
+    
+    # Process each route
+    for route in AIR_EUROPA_ROUTES:
+        origin = route["origin"]
+        destination = route["destination"]
+        description = route["description"]
+        threshold = route["threshold_eur"]
+        
+        logging.info(f"Processing AirEuropa route: {description}")
+        
+        # Generate all possible outbound dates in the range
+        current_date = start_date
+        while current_date <= end_date:
+            outbound_date_str = current_date.strftime("%Y-%m-%d")
+            
+            # Calculate valid return date range (20-30 days after outbound)
+            min_return_date = current_date + timedelta(days=MIN_DURATION_DAYS)
+            max_return_date = current_date + timedelta(days=MAX_DURATION_DAYS)
+            
+            # Ensure return date doesn't exceed our end date
+            max_return_date = min(max_return_date, end_date)
+            
+            if min_return_date <= max_return_date:
+                return_date_str = max_return_date.strftime("%Y-%m-%d")
+                
+                # AirEuropa API payload
+                payload = {
+                    "commercialFareFamilies": ["DIGITAL1"],
+                    "travelers": [{"passengerTypeCode": "ADT"}],
+                    "itineraries": [
+                        {
+                            "departureDateTime": f"{outbound_date_str}T00:00:00.000",
+                            "originLocationCode": origin,
+                            "destinationLocationCode": destination,
+                            "flexibility": 7,
+                            "isRequestedBound": True
+                        },
+                        {
+                            "departureDateTime": f"{return_date_str}T00:00:00.000",
+                            "originLocationCode": destination,
+                            "destinationLocationCode": origin,
+                            "isRequestedBound": False
+                        }
+                    ],
+                    "searchPreferences": {
+                        "showUnavailableEntries": True,
+                        "showMilesPrice": False
+                    }
+                }
+                
+                try:
+                    logging.info(f"Fetching AirEuropa flights for {description}: {current_date.strftime('%Y-%m-%d')} -> {max_return_date.strftime('%Y-%m-%d')}")
+                    response = requests.post(AIR_EUROPA_API_BASE_URL, json=payload, headers=get_aireuropa_headers())
+                    response.raise_for_status()
+                    data = response.json()
+                    
+                    # Parse AirEuropa API response
+                    if 'data' in data:
+                        for flight_data in data['data']:
+                            departure_date = flight_data.get('departureDate')
+                            return_date = flight_data.get('returnDate')
+                            
+                            # Check if dates match our search criteria
+                            if departure_date == outbound_date_str and return_date == return_date_str:
+                                # Calculate duration
+                                dep_date = datetime.strptime(departure_date, "%Y-%m-%d")
+                                ret_date = datetime.strptime(return_date, "%Y-%m-%d")
+                                duration_days = (ret_date - dep_date).days
+                                
+                                # Check if duration is within valid range
+                                if MIN_DURATION_DAYS <= duration_days <= MAX_DURATION_DAYS:
+                                    # Get price (convert from centavos to euros)
+                                    if 'prices' in flight_data and 'totalPrices' in flight_data['prices']:
+                                        total_price_centavos = flight_data['prices']['totalPrices'][0]['total']
+                                        total_price_eur = total_price_centavos / 100  # Convert centavos to euros
+                                        
+                                        if total_price_eur < threshold:
+                                            deal = {
+                                                "outbound_date": departure_date,
+                                                "return_date": return_date,
+                                                "price": total_price_eur,
+                                                "currency": "EUR",
+                                                "type": "aireuropa",
+                                                "duration_days": duration_days,
+                                                "airline": "AirEuropa",
+                                                "route": description,
+                                                "origin": origin,
+                                                "destination": destination,
+                                                "threshold": threshold
+                                            }
+                                            aireuropa_deals.append(deal)
+                                            logging.info(f"Found AirEuropa deal: {description} - {departure_date} -> {return_date} ({duration_days} days) = {total_price_eur} EUR")
+                                            break
+                    
+                except requests.exceptions.RequestException as e:
+                    logging.error(f"Error fetching AirEuropa flights for {description} on {current_date.strftime('%Y-%m-%d')}: {e}")
+                except ValueError as e:
+                    logging.error(f"Error parsing AirEuropa flights JSON for {description} on {current_date.strftime('%Y-%m-%d')}: {e}")
+            
+            # Move to next day
+            current_date += timedelta(days=1)
+    
+    return aireuropa_deals
+
 def fetch_all_flights():
     """
     Fetches all types of flights: round trip, one-way, specific date range, and Aerolíneas Argentinas.
@@ -529,5 +678,6 @@ def fetch_all_flights():
     one_way_deals = fetch_one_way_flights()
     specific_deals = fetch_specific_date_range_flights()
     ar_deals = fetch_aerolineas_argentinas_flights()
+    aireuropa_deals = fetch_aireuropa_flights()
     
-    return round_trip_deals + one_way_deals + specific_deals + ar_deals
+    return round_trip_deals + one_way_deals + specific_deals + ar_deals + aireuropa_deals
