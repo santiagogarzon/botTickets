@@ -681,7 +681,7 @@ def fetch_all_flights():
     # aireuropa_deals = fetch_aireuropa_flights()
     
     # return round_trip_deals + one_way_deals + specific_deals + ar_deals + aireuropa_deals
-    return round_trip_deals + one_way_deals + specific_deals 
+    return round_trip_deals + one_way_deals + specific_deals
 
 def check_ar_token():
     """

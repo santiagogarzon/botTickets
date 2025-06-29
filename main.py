@@ -45,7 +45,7 @@ def check_flights_and_notify():
     logging.info("Starting flight check job...")
 
     # Refresh tokens if needed before starting flight search
-    refresh_tokens_if_needed()
+    # refresh_tokens_if_needed()  # DESHABILITADO: Renovación automática de tokens
 
     # 1. Fetch all flight prices (round trip, one-way, and specific date range)
     deals = api_client.fetch_all_flights()
